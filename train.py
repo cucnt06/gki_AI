@@ -48,7 +48,56 @@ def train_regression(model, dataset):
         dataset: a PyTorch dataset object containing data to be trained on
         
     """
-    "*** YOUR CODE HERE ***"
+    
+    model.train()
+
+    # 1. Tao cac batch du lieu
+    batch_size = 20 if len(dataset) % 20 == 0 else 1
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    # 2. Khoi tao bo toi uu Adam
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # 3. Huan luyen qua nhieu epoch
+    for epoch in range(1500):
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            # Xoa gradient cua buoc truoc
+            optimizer.zero_grad()
+
+            # Du doan va tinh MSE
+            y_pred = model(x)
+            loss = regression_loss(y_pred, y)
+
+            # Lan truyen nguoc va cap nhat trong so
+            loss.backward()
+            optimizer.step()
+
+        # 4. Kiem tra MSE tren toan bo tap train
+        if (epoch + 1) % 10 == 0:
+            total_loss = 0.0
+
+            with no_grad():
+                eval_loader = DataLoader(
+                    dataset, batch_size=batch_size, shuffle=False
+                )
+
+                for batch in eval_loader:
+                    y_pred = model(batch["x"])
+                    loss = regression_loss(y_pred, batch["label"])
+                    total_loss += loss.item() * batch["x"].shape[0]
+
+            avg_loss = total_loss / len(dataset)
+
+            if (epoch + 1) % 100 == 0 or avg_loss <= 0.015:
+                print(f"Epoch {epoch+1}: MSE = {avg_loss:.6f}")
+
+            # Dung khi dat muc sai so mong muon
+            if avg_loss <= 0.015:
+                break
+
 
 
 def train_digitclassifier(model, dataset):

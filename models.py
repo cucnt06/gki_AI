@@ -83,10 +83,14 @@ class RegressionModel(Module):
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
 
+    
     def __init__(self):
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
         super().__init__()
+
+        self.layer1 = Linear(1, 128)
+        self.layer2 = Linear(128, 128)
+        self.layer3 = Linear(128, 1)
+
    
 
     def forward(self, x):
@@ -98,7 +102,9 @@ class RegressionModel(Module):
         Returns:
             A node with shape (batch_size x 1) containing predicted y-values
         """
-        "*** YOUR CODE HERE ***"
+        h1 = relu(self.layer1(x))
+        h2 = relu(self.layer2(h1))
+        return self.layer3(h2)
 
 
 class DigitClassificationModel(Module):
