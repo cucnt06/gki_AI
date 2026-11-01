@@ -1,5 +1,7 @@
 from torch import stack, tril
 from torch.nn import Module
+from torch.nn import Linear
+from torch.nn.functional import relu
 
 
 """
@@ -165,7 +167,11 @@ class LanguageIDModel(Module):
         self.num_chars = 47
         self.languages = ["English", "Spanish", "Finnish", "Dutch", "Polish"]
         super(LanguageIDModel, self).__init__()
-        "*** YOUR CODE HERE ***"
+        self.hidden_size = 100
+
+        self.input_layer = Linear(self.num_chars, self.hidden_size)
+        self.hidden_layer = Linear(self.hidden_size, self.hidden_size)
+        self.output_layer = Linear(self.hidden_size, len(self.languages))
         # Initialize your model parameters here
 
 
@@ -199,7 +205,14 @@ class LanguageIDModel(Module):
             A node with shape (batch_size x 5) containing predicted scores
                 (also called logits)
         """
-        "*** YOUR CODE HERE ***"
+        hidden = relu(self.input_layer(xs[0]))
+
+        for x in xs[1:]:
+            hidden = relu(
+                self.input_layer(x) + self.hidden_layer(hidden)
+            )
+
+        return self.output_layer(hidden)
 
 
 

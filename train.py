@@ -139,7 +139,22 @@ def train_languageid(model, dataset):
     For more information, look at the pytorch documentation of torch.movedim()
     """
     model.train()
-    "*** YOUR CODE HERE ***"
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    for epoch in range(20):
+        for batch in dataloader:
+            x = batch['x']
+            y = batch['label']
+
+            x = movedim(x, 1, 0)
+
+            optimizer.zero_grad()
+
+            loss = languageid_loss(model(x), y)
+
+            loss.backward()
+            optimizer.step()
 
 
 
