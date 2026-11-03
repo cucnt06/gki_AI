@@ -117,11 +117,33 @@ def train_regression(model, dataset):
 
 
 def train_digitclassifier(model, dataset):
-    """
-    Trains the model.
-    """
-    model.train()
-    """ YOUR CODE HERE """
+    dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
+    epochs = 30
+
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=epochs,
+        eta_min=0.00001,
+    )
+
+    for epoch in range(epochs):
+        model.train()
+
+        for batch in dataloader:
+            optimizer.zero_grad()
+            logits = model(batch["x"])
+            loss = digitclassifier_loss(logits, batch["label"])
+            loss.backward()
+            optimizer.step()
+
+        scheduler.step()
+
+        model.eval()
+        with no_grad():
+            accuracy = dataset.get_validation_accuracy()
+
+        print(f"Epoch {epoch + 1}/{epochs} - Validation accuracy: {accuracy:.2%}")
 
 
 def train_languageid(model, dataset):
@@ -159,7 +181,36 @@ def train_languageid(model, dataset):
 
 
 def Train_DigitConvolution(model, dataset):
-    """
-    Trains the model.
-    """
-    """ YOUR CODE HERE """
+    dataloader = DataLoader(
+        dataset,
+        batch_size=64,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    epochs = 30
+
+    for epoch in range(epochs):
+        model.train()
+
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            optimizer.zero_grad()
+
+            y_pred = model(x)
+            loss = digitconvolution_Loss(y_pred, y)
+
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+
+        with no_grad():
+            accuracy = dataset.get_validation_accuracy()
+
+        print(
+            f"Epoch {epoch + 1}/{epochs} - "
+            f"Validation accuracy: {accuracy:.2%}"
+        )
