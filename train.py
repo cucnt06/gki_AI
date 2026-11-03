@@ -20,17 +20,9 @@ from torch import movedim
 
 
 def train_perceptron(model, dataset):
-    """
-    Train the perceptron until convergence.
-    You can iterate through DataLoader in order to 
-    retrieve all the batches you need to train on.
-
-    Each sample in the dataloader is in the form {'x': features, 'label': label} where label
-    is the item we need to predict based off of its features.
-    """
     with no_grad():
         dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-        
+
         while True:
             mistakes = 0
 
