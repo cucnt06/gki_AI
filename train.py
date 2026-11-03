@@ -34,69 +34,34 @@ def train_perceptron(model, dataset):
 
 
 def train_regression(model, dataset):
-    """
-    Trains the model.
-
-    In order to create batches, create a DataLoader object and pass in `dataset` as well as your required 
-    batch size. You can look at PerceptronModel as a guideline for how you should implement the DataLoader
-
-    Each sample in the dataloader object will be in the form {'x': features, 'label': label} where label
-    is the item we need to predict based off of its features.
-
-    Inputs:
-        model: Pytorch model to use
-        dataset: a PyTorch dataset object containing data to be trained on
-        
-    """
-    
     model.train()
 
-    # 1. Tao cac batch du lieu
-    batch_size = 20 if len(dataset) % 20 == 0 else 1
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-    # 2. Khoi tao bo toi uu Adam
+    dataloader = DataLoader(dataset, batch_size=20, shuffle=True)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    # 3. Huan luyen qua nhieu epoch
     for epoch in range(1500):
         for batch in dataloader:
             x = batch["x"]
             y = batch["label"]
 
-            # Xoa gradient cua buoc truoc
             optimizer.zero_grad()
-
-            # Du doan va tinh MSE
             y_pred = model(x)
             loss = regression_loss(y_pred, y)
-
-            # Lan truyen nguoc va cap nhat trong so
             loss.backward()
             optimizer.step()
 
-        # 4. Kiem tra MSE tren toan bo tap train
-        if (epoch + 1) % 10 == 0:
+        with no_grad():
             total_loss = 0.0
-
-            with no_grad():
-                eval_loader = DataLoader(
-                    dataset, batch_size=batch_size, shuffle=False
-                )
-
-                for batch in eval_loader:
-                    y_pred = model(batch["x"])
-                    loss = regression_loss(y_pred, batch["label"])
-                    total_loss += loss.item() * batch["x"].shape[0]
+            for batch in DataLoader(dataset, batch_size=20):
+                y_pred = model(batch["x"])
+                total_loss += regression_loss(
+                    y_pred, batch["label"]
+                ).item() * len(batch["x"])
 
             avg_loss = total_loss / len(dataset)
 
-            if (epoch + 1) % 100 == 0 or avg_loss <= 0.015:
-                print(f"Epoch {epoch+1}: MSE = {avg_loss:.6f}")
-
-            # Dung khi dat muc sai so mong muon
-            if avg_loss <= 0.015:
-                break
+        if avg_loss <= 0.015:
+            break
 
 
 
