@@ -47,21 +47,9 @@ def languageid_loss(y_pred, y):
         y: a node with shape (batch_size x 5)
     Returns: a loss node
     """
-    "*** YOUR CODE HERE ***"
+    return cross_entropy(y_pred, y.argmax(dim=1))
 
 
 def digitconvolution_Loss(y_pred, y):
-    """
-    Computes the loss for a batch of examples.
-
-    The correct labels `y` are represented as a tensor with shape
-    (batch_size x 10). Each row is a one-hot vector encoding the correct
-    digit class (0-9).
-
-    Inputs:
-        y_pred : a node with shape (batch_size x 10)
-        y: a node with shape (batch_size x 10)
-    Returns: a loss tensor
-    """
-    """ YOUR CODE HERE """
+    return cross_entropy(y_pred, y)
     

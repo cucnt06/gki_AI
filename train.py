@@ -1,6 +1,6 @@
+
 from torch import no_grad
 from torch.utils.data import DataLoader
-
 
 """
 Functions you should use.
@@ -12,15 +12,10 @@ from losses import regression_loss, digitclassifier_loss, languageid_loss, digit
 from torch import movedim
 
 
-
-
-
-    
 def train_digitclassifier(model, dataset):
     """
     Trains the model.
     """
-
     batch_size = 128
     epochs = 35
     patience = 8
@@ -49,7 +44,6 @@ def train_digitclassifier(model, dataset):
 
     for epoch in range(epochs):
         model.train()
-        """ YOUR CODE HERE """
 
         total_loss = 0.0
         correct = 0
@@ -62,11 +56,9 @@ def train_digitclassifier(model, dataset):
             optimizer.zero_grad()
 
             y_pred = model(x)
-
             loss = digitclassifier_loss(y_pred, y)
 
             loss.backward()
-
             optimizer.step()
 
             total_loss += loss.item()
@@ -74,10 +66,7 @@ def train_digitclassifier(model, dataset):
             predicted = y_pred.argmax(dim=1)
             labels = y.argmax(dim=1)
 
-            correct += (
-                predicted == labels
-            ).sum().item()
-
+            correct += (predicted == labels).sum().item()
             total += labels.size(0)
 
         scheduler.step()
@@ -99,14 +88,11 @@ def train_digitclassifier(model, dataset):
 
         if accuracy > best_accuracy:
             best_accuracy = accuracy
-
             best_weights = {
                 name: weight.detach().clone()
                 for name, weight in model.state_dict().items()
             }
-
             no_improve = 0
-
         else:
             no_improve += 1
 
@@ -125,4 +111,73 @@ def train_digitclassifier(model, dataset):
     )
 
 
+def train_languageid(model, dataset):
+    """
+    For more information, look at the pytorch documentation of torch.movedim()
+    """
+    model.train()
 
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
+
+    for epoch in range(20):
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            x = movedim(x, 1, 0)
+
+            optimizer.zero_grad()
+
+            loss = languageid_loss(model(x), y)
+
+            loss.backward()
+            optimizer.step()
+
+
+def Train_DigitConvolution(model, dataset):
+    dataloader = DataLoader(
+        dataset,
+        batch_size=64,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
+
+    epochs = 30
+
+    for epoch in range(epochs):
+        model.train()
+
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            optimizer.zero_grad()
+
+            y_pred = model(x)
+            loss = digitconvolution_Loss(y_pred, y)
+
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+
+        with no_grad():
+            accuracy = dataset.get_validation_accuracy()
+
+        print(
+            f"Epoch {epoch + 1}/{epochs} - "
+            f"Validation accuracy: {accuracy:.2%}"
+        )
