@@ -15,17 +15,6 @@ from torch import movedim
 
 
 
-
-def __init__(self):
-        # Initialize your model parameters here
-        super().__init__()
-        input_size = 28 * 28
-        output_size = 10
-        "*** YOUR CODE HERE ***"
-        import torch
-import torch.nn as nn
-from torch.nn import Module
-
 class DigitClassificationModel(Module):
     """
     Neural network for MNIST digit classification.
