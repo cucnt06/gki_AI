@@ -32,6 +32,7 @@ def digitclassifier_loss(y_pred, y):
     """ YOUR CODE HERE """
     return cross_entropy(y_pred, y)
 
+
 def languageid_loss(y_pred, y):
     """
     Computes the loss for a batch of examples.

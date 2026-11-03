@@ -1,6 +1,6 @@
+
 from torch import no_grad
 from torch.utils.data import DataLoader
-
 
 """
 Functions you should use.
@@ -12,162 +12,126 @@ from losses import regression_loss, digitclassifier_loss, languageid_loss, digit
 from torch import movedim
 
 
-"""
-##################
-### QUESTION 1 ###
-##################
-"""
-
-
-def train_perceptron(model, dataset):
-    """
-    Train the perceptron until convergence.
-    You can iterate through DataLoader in order to 
-    retrieve all the batches you need to train on.
-
-    Each sample in the dataloader is in the form {'x': features, 'label': label} where label
-    is the item we need to predict based off of its features.
-    """
-    with no_grad():
-        dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-        
-        while True:
-            mistakes = 0
-
-            for batch in dataloader:
-                x = batch["x"][0]
-                label = batch["label"].item()
-
-                prediction = model.get_prediction(x)
-
-                if prediction != label:
-                    model.w += label * x
-                    mistakes += 1
-
-            if mistakes == 0:
-                break
-
-
-
-def train_regression(model, dataset):
+def train_digitclassifier(model, dataset):
     """
     Trains the model.
-
-    In order to create batches, create a DataLoader object and pass in `dataset` as well as your required 
-    batch size. You can look at PerceptronModel as a guideline for how you should implement the DataLoader
-
-    Each sample in the dataloader object will be in the form {'x': features, 'label': label} where label
-    is the item we need to predict based off of its features.
-
-    Inputs:
-        model: Pytorch model to use
-        dataset: a PyTorch dataset object containing data to be trained on
-        
     """
-    
-    model.train()
+    batch_size = 128
+    epochs = 35
+    patience = 8
 
-    # 1. Tao cac batch du lieu
-    batch_size = 20 if len(dataset) % 20 == 0 else 1
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
 
-    # 2. Khoi tao bo toi uu Adam
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=0.001,
+        weight_decay=1e-4
+    )
 
-    # 3. Huan luyen qua nhieu epoch
-    for epoch in range(1500):
-        for batch in dataloader:
-            x = batch["x"]
-            y = batch["label"]
-
-            # Xoa gradient cua buoc truoc
-            optimizer.zero_grad()
-
-            # Du doan va tinh MSE
-            y_pred = model(x)
-            loss = regression_loss(y_pred, y)
-
-            # Lan truyen nguoc va cap nhat trong so
-            loss.backward()
-            optimizer.step()
-
-        # 4. Kiem tra MSE tren toan bo tap train
-        if (epoch + 1) % 10 == 0:
-            total_loss = 0.0
-
-            with no_grad():
-                eval_loader = DataLoader(
-                    dataset, batch_size=batch_size, shuffle=False
-                )
-
-                for batch in eval_loader:
-                    y_pred = model(batch["x"])
-                    loss = regression_loss(y_pred, batch["label"])
-                    total_loss += loss.item() * batch["x"].shape[0]
-
-            avg_loss = total_loss / len(dataset)
-
-            if (epoch + 1) % 100 == 0 or avg_loss <= 0.015:
-                print(f"Epoch {epoch+1}: MSE = {avg_loss:.6f}")
-
-            # Dung khi dat muc sai so mong muon
-            if avg_loss <= 0.015:
-                break
-
-
-
-def train_digitclassifier(model, dataset):
-    dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
-    epochs = 30
-
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
         T_max=epochs,
-        eta_min=0.00001,
+        eta_min=1e-5
     )
+
+    best_accuracy = 0.0
+    best_weights = None
+    no_improve = 0
 
     for epoch in range(epochs):
         model.train()
 
+        total_loss = 0.0
+        correct = 0
+        total = 0
+
         for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
             optimizer.zero_grad()
-            logits = model(batch["x"])
-            loss = digitclassifier_loss(logits, batch["label"])
+
+            y_pred = model(x)
+            loss = digitclassifier_loss(y_pred, y)
+
             loss.backward()
             optimizer.step()
 
+            total_loss += loss.item()
+
+            predicted = y_pred.argmax(dim=1)
+            labels = y.argmax(dim=1)
+
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+
         scheduler.step()
 
+        train_accuracy = correct / total
+        avg_loss = total_loss / len(dataloader)
+
         model.eval()
+
         with no_grad():
             accuracy = dataset.get_validation_accuracy()
 
-        print(f"Epoch {epoch + 1}/{epochs} - Validation accuracy: {accuracy:.2%}")
+        print(
+            f"Epoch {epoch + 1:02d}/{epochs} | "
+            f"Loss: {avg_loss:.4f} | "
+            f"Train: {train_accuracy:.2%} | "
+            f"Validation: {accuracy:.2%}"
+        )
+
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_weights = {
+                name: weight.detach().clone()
+                for name, weight in model.state_dict().items()
+            }
+            no_improve = 0
+        else:
+            no_improve += 1
+
+        if no_improve >= patience:
+            print("Early stopping.")
+            break
+
+    if best_weights is not None:
+        model.load_state_dict(best_weights)
+
+    model.eval()
+
+    print(
+        f"Best Validation Accuracy: "
+        f"{best_accuracy:.2%}"
+    )
 
 
 def train_languageid(model, dataset):
     """
-    Trains the model.
-
-    Note that when you iterate through dataloader, each batch will returned as its own vector in the form
-    (batch_size x length of word x self.num_chars). However, in order to run multiple samples at the same time,
-    get_loss() and run() expect each batch to be in the form (length of word x batch_size x self.num_chars), meaning
-    that you need to switch the first two dimensions of every batch. This can be done with the movedim() function 
-    as follows:
-
-    movedim(input_vector, initial_dimension_position, final_dimension_position)
-
     For more information, look at the pytorch documentation of torch.movedim()
     """
     model.train()
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
 
     for epoch in range(20):
         for batch in dataloader:
-            x = batch['x']
-            y = batch['label']
+            x = batch["x"]
+            y = batch["label"]
 
             x = movedim(x, 1, 0)
 
@@ -179,7 +143,6 @@ def train_languageid(model, dataset):
             optimizer.step()
 
 
-
 def Train_DigitConvolution(model, dataset):
     dataloader = DataLoader(
         dataset,
@@ -187,7 +150,11 @@ def Train_DigitConvolution(model, dataset):
         shuffle=True
     )
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
+
     epochs = 30
 
     for epoch in range(epochs):
