@@ -12,6 +12,67 @@ from losses import regression_loss, digitclassifier_loss, languageid_loss, digit
 from torch import movedim
 
 
+"""
+##################
+### QUESTION 1 ###
+##################
+"""
+
+
+def train_perceptron(model, dataset):
+    """
+    Train the perceptron until convergence.
+    """
+    with no_grad():
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+        while True:
+            mistakes = 0
+
+            for batch in dataloader:
+                x = batch["x"][0]
+                label = batch["label"].item()
+                prediction = model.get_prediction(x)
+
+                if prediction != label:
+                    model.w += label * x
+                    mistakes += 1
+
+            if mistakes == 0:
+                break
+
+
+def train_regression(model, dataset):
+    model.train()
+
+    dataloader = DataLoader(dataset, batch_size=20, shuffle=True)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    for epoch in range(1500):
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            optimizer.zero_grad()
+            y_pred = model(x)
+            loss = regression_loss(y_pred, y)
+            loss.backward()
+            optimizer.step()
+
+        with no_grad():
+            total_loss = 0.0
+            for batch in DataLoader(dataset, batch_size=20):
+                y_pred = model(batch["x"])
+                total_loss += regression_loss(
+                    y_pred, batch["label"]
+                ).item() * len(batch["x"])
+
+            avg_loss = total_loss / len(dataset)
+
+        if avg_loss <= 0.015:
+            break
+
+
 def train_digitclassifier(model, dataset):
     """
     Trains the model.
