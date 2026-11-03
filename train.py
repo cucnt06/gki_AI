@@ -20,6 +20,9 @@ from torch import movedim
 
 
 def train_perceptron(model, dataset):
+    """
+    Train the perceptron until convergence.
+    """
     with no_grad():
         dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
@@ -58,6 +61,7 @@ def train_regression(model, dataset):
 
         with no_grad():
             total_loss = 0.0
+
             for batch in DataLoader(dataset, batch_size=20):
                 y_pred = model(batch["x"])
                 total_loss += regression_loss(
@@ -68,6 +72,8 @@ def train_regression(model, dataset):
 
         if avg_loss <= 0.015:
             break
+
+
 def train_digitclassifier(model, dataset):
     """
     Trains the model.
