@@ -1,6 +1,6 @@
+
 from torch import no_grad
 from torch.utils.data import DataLoader
-
 
 """
 Functions you should use.
@@ -22,15 +22,24 @@ from torch import movedim
 def train_perceptron(model, dataset):
     """
     Train the perceptron until convergence.
-    You can iterate through DataLoader in order to 
-    retrieve all the batches you need to train on.
-
-    Each sample in the dataloader is in the form {'x': features, 'label': label} where label
-    is the item we need to predict based off of its features.
     """
     with no_grad():
         dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-        "*** YOUR CODE HERE ***"
+
+        while True:
+            mistakes = 0
+
+            for batch in dataloader:
+                x = batch["x"][0]
+                label = batch["label"].item()
+                prediction = model.get_prediction(x)
+
+                if prediction != label:
+                    model.w += label * x
+                    mistakes += 1
+
+            if mistakes == 0:
+                break
 
 
 def train_regression(model, dataset):
@@ -64,36 +73,172 @@ def train_regression(model, dataset):
             break
 
 
-
 def train_digitclassifier(model, dataset):
     """
     Trains the model.
     """
-    model.train()
-    """ YOUR CODE HERE """
+    batch_size = 128
+    epochs = 35
+    patience = 8
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=0.001,
+        weight_decay=1e-4
+    )
+
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=epochs,
+        eta_min=1e-5
+    )
+
+    best_accuracy = 0.0
+    best_weights = None
+    no_improve = 0
+
+    for epoch in range(epochs):
+        model.train()
+
+        total_loss = 0.0
+        correct = 0
+        total = 0
+
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            optimizer.zero_grad()
+
+            y_pred = model(x)
+            loss = digitclassifier_loss(y_pred, y)
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+            predicted = y_pred.argmax(dim=1)
+            labels = y.argmax(dim=1)
+
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+
+        scheduler.step()
+
+        train_accuracy = correct / total
+        avg_loss = total_loss / len(dataloader)
+
+        model.eval()
+
+        with no_grad():
+            accuracy = dataset.get_validation_accuracy()
+
+        print(
+            f"Epoch {epoch + 1:02d}/{epochs} | "
+            f"Loss: {avg_loss:.4f} | "
+            f"Train: {train_accuracy:.2%} | "
+            f"Validation: {accuracy:.2%}"
+        )
+
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_weights = {
+                name: weight.detach().clone()
+                for name, weight in model.state_dict().items()
+            }
+            no_improve = 0
+        else:
+            no_improve += 1
+
+        if no_improve >= patience:
+            print("Early stopping.")
+            break
+
+    if best_weights is not None:
+        model.load_state_dict(best_weights)
+
+    model.eval()
+
+    print(
+        f"Best Validation Accuracy: "
+        f"{best_accuracy:.2%}"
+    )
 
 
 def train_languageid(model, dataset):
     """
-    Trains the model.
-
-    Note that when you iterate through dataloader, each batch will returned as its own vector in the form
-    (batch_size x length of word x self.num_chars). However, in order to run multiple samples at the same time,
-    get_loss() and run() expect each batch to be in the form (length of word x batch_size x self.num_chars), meaning
-    that you need to switch the first two dimensions of every batch. This can be done with the movedim() function 
-    as follows:
-
-    movedim(input_vector, initial_dimension_position, final_dimension_position)
-
     For more information, look at the pytorch documentation of torch.movedim()
     """
     model.train()
-    "*** YOUR CODE HERE ***"
 
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
+
+    for epoch in range(20):
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            x = movedim(x, 1, 0)
+
+            optimizer.zero_grad()
+
+            loss = languageid_loss(model(x), y)
+
+            loss.backward()
+            optimizer.step()
 
 
 def Train_DigitConvolution(model, dataset):
-    """
-    Trains the model.
-    """
-    """ YOUR CODE HERE """
+    dataloader = DataLoader(
+        dataset,
+        batch_size=64,
+        shuffle=True
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=0.001
+    )
+
+    epochs = 30
+
+    for epoch in range(epochs):
+        model.train()
+
+        for batch in dataloader:
+            x = batch["x"]
+            y = batch["label"]
+
+            optimizer.zero_grad()
+
+            y_pred = model(x)
+            loss = digitconvolution_Loss(y_pred, y)
+
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+
+        with no_grad():
+            accuracy = dataset.get_validation_accuracy()
+
+        print(
+            f"Epoch {epoch + 1}/{epochs} - "
+            f"Validation accuracy: {accuracy:.2%}"
+        )
