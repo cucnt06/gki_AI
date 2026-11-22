@@ -2,7 +2,7 @@ PROJECT 5 – MACHINE LEARNING
 
 1. Giới thiệu
 
-Project 5 là dự án thực hành các kiến thức về Machine Learning và Deep Learning thông qua 6 bài tập sử dụng Python và PyTorch.
+Project 5 là dự án thực hành các kiến thức về Machine Learning thông qua 6 bài tập sử dụng Python và PyTorch.
 
 Các bài tập bao gồm:
 
